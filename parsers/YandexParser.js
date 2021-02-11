@@ -1,4 +1,4 @@
-// https://yandex.ru/maps/56/chelyabinsk/?ll=61.485341%2C55.149248&z=12.01
+// https://yandex.ru/maps/56/chelyabinsk/?ll=61.402554%2C55.159897&z=11
 
 const Parser = require('./Parser')
 const Emitter = require('../utils/ParserEmitter')
@@ -6,7 +6,7 @@ const Emitter = require('../utils/ParserEmitter')
 class YandexParser extends Parser {
 
     constructor(companyName, events) {
-        super(companyName, 'gis');
+        super(companyName, 'yandex');
         this.emitter = new Emitter();
         this.emitter.onParserStarted(events.onStarted)
         this.emitter.onParserFinish(events.onFinish)
@@ -16,19 +16,14 @@ class YandexParser extends Parser {
         this.emitter.onParserNotSaveScreen(events.onNotSavedScreen)
     }
 
-
     async parse() {
         await this.init()
-        await this.gotoGis()
+        await this.gotoYandex()
+        await this.createDirectory()
         await this.searchFilials()
-        // if (this.page._target._targetInfo.url.indexOf('firm') < 1) {
-        //     await this.searchFirstCompany()
-        // }
-        this.createDirectory()
-        await this.saveScreen()
     }
 
-    async gotoGis() {
+    async gotoYandex() {
         if (!this.isCrashed) {
             if (this.companyName) {
                 this.emitter.emitParserStart(this)
@@ -36,7 +31,15 @@ class YandexParser extends Parser {
                     width: 1920,
                     height: 4080
                 })
-                await this.page.goto(`https://2gis.ru/chelyabinsk/search/${this.companyName}`)
+                await this.page.setRequestInterception(true);
+                this.page.on('request', interceptedRequest => {
+                    if (interceptedRequest.url().indexOf('https://core-renderer-tiles.maps.yandex.net/tiles') + 1 || interceptedRequest.url().indexOf('https://avatars.mds.yandex.net/') + 1) {
+                        interceptedRequest.abort();
+                    } else {
+                        interceptedRequest.continue();
+                    }
+                });
+                await this.page.goto(`https://yandex.ru/maps/56/chelyabinsk/?ll=61.402554%2C55.159897&z=11`)
             } else {
                 throw new Error('company name is required')
             }
@@ -46,83 +49,69 @@ class YandexParser extends Parser {
     async searchFilials() {
         if (this.page !== null) {
             try {
-                let data = [];
-                let selectors = await this.page.$$('._vhuumw');
+                await this.page.waitForSelector(".input__control");
+                await this.page.type('.input__control', this.companyName, {delay: 130});
+                await this.page.click(".small-search-form-view__icon");
+                await this.page.waitForTimeout(500)
+                if (this.page._target._targetInfo.url.indexOf('/chain/') < 1) {
+                    await this.page.waitForSelector('.business-contacts-view__address')
+                    let address = await this.page.evaluate(() => {
+                        let data = document.querySelector('.business-contacts-view__address').innerText;
+                        return {
+                            data
+                        }
+                    });
+                    console.log(address)
+                    await this.page.waitForSelector("._name_reviews")
+                    await this.page.click('._name_reviews')
+                    try {
+                        await this.page.waitForSelector('.reviews-view')
+                        const element = await this.page.$('section.reviews-view');
+                        await element.screenshot({path: `img/${this.companyName}/${this.placeName}/${address.data}_${this.companyName}_reviews.png`});
 
-                for (let i = 0; i < selectors.length; i++) {
-                    const item = await (await selectors[i].getProperty('innerText')).jsonValue();
-                    if (this.companyName.toLowerCase() === item.toString().toLowerCase()) {
-                        data.push(selectors[i])
+                    } catch (e) {
+                        await this.close('screenshot')
+                    }
+                } else {
+                    await this.page.waitForSelector(".search-snippet-view");
+                    let selectors = await this.page.$$('.search-snippet-view');
+                    for (let i = 0; i < selectors.length; i++) {
+                        try {
+                            await this.page.click(`.search-snippet-view:nth-child(${i + 1})`)
+                            await this.page.waitForSelector('.business-contacts-view__address')
+                            let address = await this.page.evaluate(() => {
+                                let data = document.querySelector('.business-contacts-view__address').innerText;
+                                return {
+                                    data
+                                }
+                            });
+                            console.log(address)
+                            await this.page.waitForSelector("._name_reviews")
+                            await this.page.click('._name_reviews')
+
+                            try {
+                                await this.page.waitForSelector('.reviews-view')
+                                await this.page.waitForTimeout(500)
+                                const element = await this.page.$('section.reviews-view');
+                                await element.screenshot({path: `img/${this.companyName}/${this.placeName}/${address.data}_${this.companyName}_reviews.png`});
+
+                            } catch (e) {
+                                await this.close('screenshot')
+                            }
+                            await this.page.click('._type_back')
+                            await this.page.waitForSelector(".search-snippet-view");
+                        } catch (e) {
+                            console.log('Всё сломалось')
+                        }
                     }
                 }
-                if (data.length === 0) {
-                    this.close('search')
-                } else {
-                    await this.goToOurFilials(data)
-                }
-            } catch (e) {
-                this.close('search')
-            }
-
-        }
-
-    }
-
-    async goToOurFilials() {
-        try {
-            await this.page.click('#root > div > div > div._byeclqp > div._1u4plm2 > div:nth-child(2) > div > div > div:nth-child(2) > div > div > div > div._1tdquig > div._z72pvu > div > div > div > div:nth-child(1) > div:nth-child(2) > div > div:nth-child(1) > div');
-            await this.page.waitForSelector('._1pbewv7', {
-                visible: true,
-            });
-            await this.page.click('#root > div > div > div._byeclqp > div._1u4plm2 > div:nth-child(2) > div:nth-child(2) > div > div > div > div > div._jcreqo > div._1tdquig > div > div > div > div > div:nth-child(1) > div > div._1b96w9b > div._18d40fw > div > div > div._jro6t0 > div:nth-child(3) > div');
-
-            try{
-                await this.page.waitForSelector('#root > div > div > div._byeclqp > div._1u4plm2 > div:nth-child(2) > div:nth-child(2) > div > div > div > div > div._jcreqo > div._1tdquig > div > div._3zzdxk > div > div > div:nth-child(1) > div > div._1b96w9b > div:nth-child(2) > div._ci8dd0 > div:nth-child(1) > ul > li._120g3oa > label\n', {
-                    visible: true,
-                });
-                await this.page.click('#root > div > div > div._byeclqp > div._1u4plm2 > div:nth-child(2) > div:nth-child(2) > div > div > div > div > div._jcreqo > div._1tdquig > div > div._3zzdxk > div > div > div:nth-child(1) > div > div._1b96w9b > div:nth-child(2) > div._ci8dd0 > div:nth-child(1) > ul > li._120g3oa > label\n')
-                await this.page.waitForSelector('#root > div > div > div._byeclqp > div._1u4plm2 > div:nth-child(2) > div:nth-child(2) > div > div > div > div > div._jcreqo > div._1tdquig > div > div._3zzdxk > div > div > div:nth-child(1) > div > div._1b96w9b > div:nth-child(2) > div._ktlstk > div > div > div')
-
-                await this.page.waitForTimeout(1000)
-
-                let readMoreSelectors = await this.page.$$('._14r4upv');
-                for (let i = 0; i < readMoreSelectors.length; i++) {
-                    await this.page.click('._14r4upv')
-                    await this.page.waitForTimeout(300)
-                }
-            }catch (e) {
-                await this.page.setViewport({
-                    width: 1920,
-                    height: 1080
-                })
-                const element = await this.page.$('._18lzknl');
-                await element.screenshot({path: `img/${this.companyName}/${this.placeName}/${this.companyName}_reviews.png`});
-            }
-
-        } catch (e) {
-            await this.close('search')
-        }
-
-    }
-
-    async saveScreen() {
-        if (this.page !== null) {
-            try {
-                const element = await this.page.$('._1b96w9b');
-                await element.screenshot({path: `img/${this.companyName}/${this.placeName}/${this.companyName}_reviews.png`});
-                this.emitter.emitParserSaveScreen(this)
                 await this.close('success')
-
-            } catch {
-                console.log('Screenshot is crash')
-                this.emitter.emitParserNotSaveScreen(this)
-                await this.close('screenshot')
+            } catch (e) {
+                await this.close('search')
             }
         }
     }
 
-
-q
 }
 
 module.exports = YandexParser;

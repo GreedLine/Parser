@@ -15,7 +15,7 @@ class Parser {
 
     async init() {
         if (this.browser === null) {
-            this.browser = await puppeteer.launch({headless: true});
+            this.browser = await puppeteer.launch({headless: false});
             this.page = await this.browser.newPage();
 
             await this.page.setViewport({

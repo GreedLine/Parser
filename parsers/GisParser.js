@@ -31,6 +31,17 @@ class GisParser extends Parser {
                     width: 1920,
                     height: 4080
                 })
+
+                await this.page.setRequestInterception(true);
+                this.page.on('request', interceptedRequest => {
+                    if (interceptedRequest.url().indexOf('https://tile2.maps.2gis.com/vt') + 1){
+                        interceptedRequest.abort();
+                    }
+                    else{
+                        interceptedRequest.continue();
+                    }
+                });
+
                 await this.page.goto(`https://2gis.ru/chelyabinsk/search/${this.companyName}`)
             } else {
                 throw new Error('company name is required')
@@ -51,7 +62,9 @@ class GisParser extends Parser {
                     }
                 }
                 if (data.length === 0) {
-                    await this.close('search')
+                    console.log('123')
+
+                    // await this.close('search')
                 } else {
                     await this.goToOurFilials(data)
                 }
@@ -70,14 +83,13 @@ class GisParser extends Parser {
                 visible: true,
             });
             await this.page.click('#root > div > div > div._byeclqp > div._1u4plm2 > div:nth-child(2) > div:nth-child(2) > div > div > div > div > div._jcreqo > div._1tdquig > div > div > div > div > div:nth-child(1) > div > div._1b96w9b > div._18d40fw > div > div > div._jro6t0 > div:nth-child(3) > div');
-
             try {
-                await this.page.waitForSelector('#root > div > div > div._byeclqp > div._1u4plm2 > div:nth-child(2) > div:nth-child(2) > div > div > div > div > div._jcreqo > div._1tdquig > div > div._3zzdxk > div > div > div:nth-child(1) > div > div._1b96w9b > div:nth-child(2) > div._ci8dd0 > div:nth-child(1) > ul > li._120g3oa > label\n', {
-                    visible: true,
-                });
-                await this.page.click('#root > div > div > div._byeclqp > div._1u4plm2 > div:nth-child(2) > div:nth-child(2) > div > div > div > div > div._jcreqo > div._1tdquig > div > div._3zzdxk > div > div > div:nth-child(1) > div > div._1b96w9b > div:nth-child(2) > div._ci8dd0 > div:nth-child(1) > ul > li._120g3oa > label\n')
+                try {
+                    await this.page.waitForTimeout(400)
+                    await this.page.click('#root > div > div > div._byeclqp > div._1u4plm2 > div:nth-child(2) > div:nth-child(2) > div > div > div > div > div._jcreqo > div._1tdquig > div > div._3zzdxk > div > div > div:nth-child(1) > div > div._1b96w9b > div:nth-child(2) > div._ci8dd0 > div:nth-child(1) > ul > li._120g3oa')
+                }catch (e) {
+                }
                 await this.page.waitForSelector('#root > div > div > div._byeclqp > div._1u4plm2 > div:nth-child(2) > div:nth-child(2) > div > div > div > div > div._jcreqo > div._1tdquig > div > div._3zzdxk > div > div > div:nth-child(1) > div > div._1b96w9b > div:nth-child(2) > div._ktlstk > div > div > div')
-
                 await this.page.waitForTimeout(1000)
 
                 let readMoreSelectors = await this.page.$$('._14r4upv');

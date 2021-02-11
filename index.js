@@ -1,5 +1,6 @@
 const FlampParser = require("./parsers/FlampParser")
 const GisParser = require("./parsers/GisParser")
+const YandexParser = require("./parsers/YandexParser")
 
 const {workerData, parentPort} = require('worker_threads')
 
@@ -120,7 +121,66 @@ async function parse() {
         }
     })
 
-     await Promise.all([parserGis.parse(), parserFlamp.parse()])
+    const parserYandex = new YandexParser(workerData, {
+        onStarted: (data) => {
+            parentPort.postMessage({
+                value: 'Yandex parser: started',
+                parser: 'Yandex',
+                isFinish: false,
+                isErrorFinish: false
+            });
+            console.log('Yandex parser started', data.companyName)
+        },
+        onFinish: (data) => {
+            parentPort.postMessage({
+                value: 'Yandex parser: Finished',
+                parser: 'Yandex',
+                isFinish: true,
+                isErrorFinish: false
+            });
+            console.log('Yandex parser finish', data.companyName)
+        },
+        onPageNotFound: (data) => {
+            parentPort.postMessage({
+                value: 'Yandex parser: company not found',
+                parser: 'Yandex',
+                isFinish: true,
+                isErrorFinish: true
+            });
+            console.log('Yandex parser page not found', data.companyName)
+        },
+        onSavedScreen: (data) => {
+            parentPort.postMessage({
+                value: 'Yandex parser: screenshot saved',
+                parser: 'Yandex',
+                isFinish: false,
+                isErrorFinish: false
+            });
+            console.log('Yandex parser save screen', data.companyName)
+        },
+        onNotSavedScreen: (data) => {
+            parentPort.postMessage({
+                value: 'Yandex parser: screenshot not saved',
+                parser: 'Yandex',
+                isFinish: true,
+                isErrorFinish: true
+            });
+            console.log('Yandex parser has not save screen', data.companyName)
+        },
+        onFinishError: (data) => {
+            parentPort.postMessage({
+                value: 'Yandex parser finished with error: screenshot not saved',
+                parser: 'Yandex',
+                isFinish: true,
+                isErrorFinish: true
+            });
+            console.log('Yandex parser has not save screen', data.companyName)
+        }
+    })
+
+    // await parserYandex.parse()
+
+    await Promise.all([parserGis.parse(), parserFlamp.parse(), parserYandex.parse()])
 
 }
 
