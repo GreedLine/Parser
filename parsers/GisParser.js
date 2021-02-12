@@ -18,7 +18,7 @@ class GisParser extends Parser {
     async parse() {
         await this.init()
         await this.gotoGis()
-        await this.searchFilials()
+        await this.goToOurFilials()
         this.createDirectory()
         await this.saveScreen()
     }
@@ -47,33 +47,6 @@ class GisParser extends Parser {
                 throw new Error('company name is required')
             }
         }
-    }
-
-    async searchFilials() {
-        if (this.page !== null) {
-            try {
-                let data = [];
-                let selectors = await this.page.$$('._vhuumw');
-
-                for (let i = 0; i < selectors.length; i++) {
-                    const item = await (await selectors[i].getProperty('innerText')).jsonValue();
-                    if (this.companyName.toLowerCase() === item.toString().toLowerCase()) {
-                        data.push(selectors[i])
-                    }
-                }
-                if (data.length === 0) {
-                    console.log('123')
-
-                    // await this.close('search')
-                } else {
-                    await this.goToOurFilials(data)
-                }
-            } catch (e) {
-                await this.close('search')
-            }
-
-        }
-
     }
 
     async goToOurFilials() {
