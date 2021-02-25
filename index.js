@@ -1,6 +1,7 @@
 const FlampParser = require("./parsers/FlampParser")
 const GisParser = require("./parsers/GisParser")
 const YandexParser = require("./parsers/YandexParser")
+const ZoonParser = require("./parsers/ZoonParser")
 
 const {workerData, parentPort} = require('worker_threads')
 
@@ -178,9 +179,67 @@ async function parse() {
         }
     })
 
+    const zoonParser = new ZoonParser(workerData, {
+        onStarted: (data) => {
+            parentPort.postMessage({
+                value: 'Zoon parser: started',
+                parser: 'Zoon',
+                isFinish: false,
+                isErrorFinish: false
+            });
+            console.log('Zoon parser started', data.companyName)
+        },
+        onFinish: (data) => {
+            parentPort.postMessage({
+                value: 'Zoon parser: Finished',
+                parser: 'Zoon',
+                isFinish: true,
+                isErrorFinish: false
+            });
+            console.log('Zoon parser finish', data.companyName)
+        },
+        onPageNotFound: (data) => {
+            parentPort.postMessage({
+                value: 'Zoon parser: company not found',
+                parser: 'Zoon',
+                isFinish: true,
+                isErrorFinish: true
+            });
+            console.log('Zoon parser page not found', data.companyName)
+        },
+        onSavedScreen: (data) => {
+            parentPort.postMessage({
+                value: 'Zoon parser: screenshot saved',
+                parser: 'Zoon',
+                isFinish: false,
+                isErrorFinish: false
+            });
+            console.log('Zoon parser save screen', data.companyName)
+        },
+        onNotSavedScreen: (data) => {
+            parentPort.postMessage({
+                value: 'Zoon parser: screenshot not saved',
+                parser: 'Zoon',
+                isFinish: true,
+                isErrorFinish: true
+            });
+            console.log('Zoon parser has not save screen', data.companyName)
+        },
+        onFinishError: (data) => {
+            parentPort.postMessage({
+                value: 'Zoon parser finished with error: screenshot not saved',
+                parser: 'Zoon',
+                isFinish: true,
+                isErrorFinish: true
+            });
+            console.log('Zoon parser has not save screen', data.companyName)
+        }
+    })
     // await parserYandex.parse()
 
-    await Promise.all([parserGis.parse(), parserFlamp.parse(), parserYandex.parse()])
+    await zoonParser.parse();
+
+    // await Promise.all([parserGis.parse(), parserFlamp.parse(), parserYandex.parse()])
 
 }
 

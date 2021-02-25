@@ -53,7 +53,7 @@ class FlampParser extends Parser {
             try {
                 await this.page.screenshot({path: `img/${this.companyName}/${this.placeName}/${this.companyName}_Header.png`});
                 await this.page.screenshot({
-                    path: `img/${this.companyName}/${this.placeName}/${this.companyName}_ull.png`,
+                    path: `img/${this.companyName}/${this.placeName}/${this.companyName}_full.png`,
                     fullPage: true
                 });
                 const element = await this.page.$('#reviews');
